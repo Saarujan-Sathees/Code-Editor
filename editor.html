@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editor</title>
+    <meta charset="utf-8">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&family=Source+Code+Pro:ital,wght@0,200;0,300;0,400;0,500;1,200;1,300;1,400;1,500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="stylesheet.css">
+    <script src="editor.js"></script>
+</head>
+
+<body>
+    <div id="main-menu">
+        <div class="main-button" id="file-button">File
+            <div class="main-hover-menu" id="file-menu">
+                <button class="main-hover-button" onclick="openFile()">Open File</button>
+                <button class="main-hover-button" onclick="saveFile()">Save File</button>
+            
+            </div>
+        </div>
+        <div class="main-button" id="edit-button">Edit
+            <div class="main-hover-menu" id="edit-menu"></div>
+        </div>
+        <div class="main-button" id="view-button">View
+            <div class="main-hover-menu" id="view-menu"></div>
+        </div>
+    </div>
+    
+    <div id="file-display"></div>
+    <div id="line-display"></div>  
+    <div contenteditable oninput="updateLD()" onscroll="scrollLD()" id="editor" spellcheck="false"></div>
+</body>
