@@ -35,12 +35,14 @@ body, html {
 	margin-bottom: 1vh;
 	background: var(--menu);
 	border-radius: 8px;
+	opacity: 60%;
 }
 
 ::-webkit-scrollbar-thumb {
 	background-color: var(--on-hover);
 	scroll-behavior: smooth;
 	border-radius: 10px;
+	opacity: 80%;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -128,10 +130,10 @@ body, html {
     margin-left: 16vw;
 	padding-top: 8vh;
 	padding-bottom: 8vh;
-	resize: none; 
-	border: none; 
+	resize: none;
+	border: none;
 	outline: none;
-	overflow: auto;
+	overflow: overlay;
 	overflow-wrap: unset;
 	white-space: pre;
 	background-color: var(--background);
@@ -140,6 +142,7 @@ body, html {
 	font-size: var(--editor-font-size);
 	font-weight: var(--editor-font-weight);
 	line-height: 18px;
+	tab-size: 5;
 }
 
 #line-display {
@@ -151,7 +154,7 @@ body, html {
 	padding-top: 8vh;
 	padding-bottom: 8vh;
 	text-align: center;
-	overflow-y: hidden;
+	overflow: hidden;
 }
 
 .main-button:hover, .main-hover-button:hover {
@@ -172,11 +175,15 @@ body, html {
 
 .code-line {
     height: 18px;
-    width: 69vw;
+    width: 70vw;
 }
 
 .symbol {
     color: var(--text);
+}
+
+.number {
+	color: rgb(58, 186, 152);
 }
 
 .keyword {

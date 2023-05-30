@@ -1,4 +1,4 @@
-let lineCount = 1, lineDisplay, editor, scrollPos, currentHoverMenu = null, prevScrollTop = 0, currentFile = null, currentLine = 0;
+let lineCount = 1, lineDisplay, editor, scrollPos, currentHoverMenu = null, prevScrollTop = 0, currentFile = null, currentLine = 0, lang;
 
 //#region Syntax
 const CPP_KEYWORDS = [ "auto", "else", "long", "switch", "break", "virtual", "register", "typedef", "case", "extern", "return", "union",
@@ -13,7 +13,7 @@ const JAVA_KEYWORDS = [ "class", "abstract", "assert", "boolean", "break", "byte
                         "return", "short", "static", "strictfp", "super", "switch", "synchronized", "this", "throw", "throws", "transient",
                         "try", "void", "volatile", "while" ];
 
-let parseIndex, parseLine, isMultiLineComment = false;
+let KEYWORDS, parseIndex, parseLine, isMultiLineComment = false;
 
 const OPERATORS = [ "+", "-", "*", "/", "%", "=", "+=", "-=", "*=", "/=", "%=", "++", "--",
                     "==", "!", "!=", ">", "<", ">=", "<=", "(", ")", "{", "}", "[", "]", ".", ",", "&&", "||" ];
@@ -41,8 +41,8 @@ function isAlphaNumeric(c) {
 function parseSpace(parseLine) {
     let value = "";
     for (; parseIndex < parseLine.length; ++parseIndex) {
-        if (parseLine.charAt(parseIndex) == ' ' || parseLine[parseIndex] == '\t') 
-            value += parseLine.charAt(parseIndex);
+        if (parseLine[parseIndex] == ' ' || parseLine[parseIndex] == '\t') 
+            value += parseLine[parseIndex];
         else 
             return `<span class='symbol'>${value.replaceAll("    ", "\t")}</span>`;
     }
@@ -51,13 +51,13 @@ function parseSpace(parseLine) {
 }
 
 function parseNumber(parseLine) {
-    let isDecimal = false, value = "" + parseLine.charAt(parseIndex), idxLimit = 18 + parseIndex++;
+    let isDecimal = false, value = "" + parseLine[parseIndex], idxLimit = 18 + parseIndex++;
     for (; parseIndex < parseLine.length; ++parseIndex) {
-        if (parseIndex >= idxLimit || (isDecimal && parseLine.charAt(parseIndex) == '.')) {
+        if (parseIndex >= idxLimit || (isDecimal && parseLine[parseIndex] == '.')) {
             return null;
-        } else if (isNumeric(parseLine.charAt(parseIndex))) {
-            value += parseLine.charAt(parseIndex);
-        } else if (parseLine.charAt(parseIndex) == '.') {
+        } else if (isNumeric(parseLine[parseIndex])) {
+            value += parseLine[parseIndex];
+        } else if (parseLine[parseIndex] == '.') {
             value += '.';
             isDecimal = true;
         } else {
@@ -69,30 +69,14 @@ function parseNumber(parseLine) {
 }
 
 function parseString(parseLine) {
-    let value = "", strStart = parseLine.charAt(parseIndex);
+    let value = "", strStart = parseLine[parseIndex];
     ++parseIndex; //We know that the previous parseIndex is the character '"'
     for (; parseIndex < parseLine.length; ++parseIndex) {
-        if (parseLine.charAt(parseIndex) == strStart) {
+        if (parseLine[parseIndex] == strStart) {
             ++parseIndex; //Getting past the final ' or "
             return `<span class='string'>"${value}"</span>`;
-        } else if (parseLine.charAt(parseIndex) == '\\') {
-            if (parseIndex == parseLine.length - 1) {
-                return "";
-            } else {
-                switch (parseLine.charAt(++parseIndex)) {
-                    case 'b': value += '\b'; break;
-                    case 'f': value += '\f'; break;
-                    case 'n': value += '\n'; break;
-                    case 'r': value += '\r'; break;
-                    case 't': value += '\t'; break;
-                    case '\'': value += "'"; break;
-                    case '"': value += '"'; break;
-                    case '\\': value += '\\'; break;
-                    default: return null;
-                }
-            }
         } else {
-            value += parseLine.charAt(parseIndex);
+            value += parseLine[parseIndex];
         }
     }
     
@@ -100,65 +84,76 @@ function parseString(parseLine) {
 }
 
 function parseKeyword(parseLine) {
-    let value = "" + parseLine.charAt(parseIndex++);
+    let value = "" + parseLine[parseIndex++];
     for (; parseIndex < parseLine.length; ++parseIndex) {
-        if (!isAlphaNumeric(parseLine.charAt(parseIndex))) {
-            for (let i = 0; i < JAVA_KEYWORDS.length; ++i) {
-                if (JAVA_KEYWORDS[i] == value) 
+        if (!isAlphaNumeric(parseLine[parseIndex])) {
+            for (let i = 0; i < KEYWORDS.length; ++i) {
+                if (KEYWORDS[i] == value) 
                     return `<span class='keyword'>${value}</span>`;
             }
 
             return `<span class='identifier'>${value}</span>`;
         }
         
-        value += parseLine.charAt(parseIndex);
+        value += parseLine[parseIndex];
+    }
+
+    for (let i = 0; i < KEYWORDS.length; ++i) {
+        if (KEYWORDS[i] == value) 
+            return `<span class='keyword'>${value}</span>`;
     }
 
     return `<span class='identifier'>${value}</span>`;
 }
 
 function parseOperator(parseLine) {
-    let value = "" + parseLine.charAt(parseIndex++);
+    let value = "" + parseLine[parseIndex++];
     for (; parseIndex < parseLine.length; ++parseIndex) {
-        if (isOperator(value + parseLine.charAt(parseIndex)))
-            value += parseLine.charAt(parseIndex);
-        else 
+        if (isOperator(value + parseLine[parseIndex]))
+            value += parseLine[parseIndex];
+        else if (value == '<')
+            return `<span class='symbol'>&lt;</span>`;
+        else if (value == '>')
+            return `<span class='symbol'>&gt;</span>`;
+        else
             return `<span class='symbol'>${value}</span>`;
     }
 
-    return `<span class='symbol'>${value}</span>`;
+    return `<span class='symbol'>${value == '<' ? '&lt;' : value == '>' ? '&gt;' : value}</span>`;
 }
 
 function highlightLine(parseLine) {
     parseIndex = 0;
-    let line = "", temp, enoughChars;
+    let line = "", temp, enoughChars, curr;
     while (parseIndex < parseLine.length) {
         enoughChars = parseIndex < parseLine.length - 1;
-        if (enoughChars && parseLine[parseIndex] == '/' && parseLine[parseIndex + 1] == '/') { //Single Comment
+        curr = parseLine[parseIndex];
+        if (enoughChars && curr == '/' && parseLine[parseIndex + 1] == '/') { //Single Comment
             return line + `<span class='comment'>${parseLine.substring(parseIndex)}</span>`;  
-        } else if (enoughChars && parseLine[parseIndex] == '/' && parseLine[parseIndex + 1] == '*') { //MultiComment
+        } else if (enoughChars && curr == '/' && parseLine[parseIndex + 1] == '*') { //MultiComment
             isMultiLineComment = true;
             return line + `<span class='comment'>${parseLine.substring(parseIndex)}</span>`;  
-        } else if (enoughChars && parseLine[parseIndex] == '*' && parseLine[parseIndex + 1] == '/' && isMultiLineComment) { 
+        } else if (enoughChars && curr == '*' && parseLine[parseIndex + 1] == '/' && isMultiLineComment) { 
             isMultiLineComment = false;
             return line + `<span class='comment'>${parseLine.substring(parseIndex)}</span>`;  
-        } else if (parseLine.charAt(parseIndex) == ';') {
-            return line + "<span class='symbol'>;</span>";
-        } else if (isNumeric(parseLine.charAt(parseIndex))) { //Parsing a number
+        } else if (curr == ';') {
+            line += `<span class='symbol'>;</span>`;
+            ++parseIndex;
+        } else if (isNumeric(curr)) { //Parsing a number
             temp = parseNumber(parseLine);
             if (temp == null) 
                 throw Error("Error while parsing number!");
             else 
                 line += temp;
-        } else if (parseLine.charAt(parseIndex) == '"' || parseLine.charAt(parseIndex) == "'") { //Parsing a String value
+        } else if (curr == '"' || curr == "'" || lang == "JS" && curr == '`') { //Parsing a String value
             temp = parseString(parseLine);
             if (temp == null) 
                 throw Error("Error while parsing String!");
             else 
                 line += temp;
-        } else if (parseLine.charAt(parseIndex) == ' ' || parseLine.charAt(parseIndex) == '\t') { //Parsing a space
+        } else if (curr == ' ' || curr == '\t') { //Parsing a space
             line += parseSpace(parseLine);
-        } else if (isAlpha(parseLine.charAt(parseIndex)) || parseLine.charAt(parseIndex) == '_') { //Parsing a keyword or an identifier
+        } else if (isAlpha(curr) || curr == '_') { //Parsing a keyword or an identifier
             temp = parseKeyword(parseLine);
             if (temp == null) 
                 throw Error("Error while parsing keyword/identifier!");
@@ -167,8 +162,7 @@ function highlightLine(parseLine) {
         } else { //Parsing an operator
             temp = parseOperator(parseLine);
             if (temp == null) {
-                alert('"' + parseLine[parseIndex] + '"');
-                throw Error("Unknown character found!");
+                throw Error("Unknown character found: " + curr);
             } else 
                 line += temp;
         }
@@ -179,26 +173,57 @@ function highlightLine(parseLine) {
 
 function insertHighlights(content) {
     let res = "", updated = "", idx;
-    for (let i = 0; i < content.length; ++i) {
-        if (content[i] == '\n') {
-            idx = updated.indexOf("*/");
-            if (isMultiLineComment && idx == -1) { //Multi-line comment hasn't finished yet
-                res += `<div class='code-line'><span class='comment'>${updated}</span></div>`;  
-            } else if (isMultiLineComment) {
-                isMultiLineComment = false;
-                res += `<div class='code-line'><span class='comment'>${updated.substring(0, idx + 2)}</span>
-                        ${highlightLine(updated.substring(idx + 2))}</div>`; 
-            } else {
-                res += "<div class='code-line'>" + highlightLine(updated) + "</div>";
-            }
+    isMultiLineComment = false;
 
-            updated = "";
-        } else if (content[i] != '\r') {
-            updated += content[i];
+    if (lang == "TEXT") {
+        for (let i = 0; i < content.length; ++i) {
+            if (content[i] == '\n') {
+                res += `<div class='code-line'><span class='symbol'>${updated}</span></div>`;
+                updated = "";
+            } else if (content[i] == '\\') 
+                updated += "\\";
+            else if (content[i] == '>') 
+                updated += "&gt;";
+            else if (content[i] == '<') 
+                updated += "&lt;";
+            else if (content[i] != '\r') 
+                updated += content[i];
         }
+
+        return res;
+    } else {
+        for (let i = 0; i < content.length; ++i) {
+            if (content[i] == '\n') {
+                idx = updated.indexOf("*/");
+                if (isMultiLineComment && idx == -1) { //Multi-line comment hasn't finished yet
+                    res += `<div class='code-line'><span class='comment'>${updated}</span></div>`;  
+                } else if (isMultiLineComment) {
+                    isMultiLineComment = false;
+                    res += `<div class='code-line'><span class='comment'>${updated.substring(0, idx + 2)}</span>
+                            ${highlightLine(updated.substring(idx + 2))}</div>`; 
+                } else {
+                    editor.innerHTML = res;
+                    res += "<div class='code-line'>" + highlightLine(updated) + "</div>";
+                }
+
+                updated = "";
+            } else if (content[i] == '\\') {
+                updated += "\\";
+            } else if (content[i] != '\r') {
+                updated += content[i];
+            }
+        }
+
+        idx = updated.indexOf("*/");
+        res += `<div class='code-line'>`;
+        if (isMultiLineComment && idx == -1) //Multi-line comment hasn't finished yet
+            return res + `<span class='comment'>${updated}</span></div>`;  
+        else if (isMultiLineComment) 
+            return res + `<span class='comment'>${updated.substring(0, idx + 2)}</span>${highlightLine(updated.substring(idx + 2))}</div>`; 
+        else
+            return res + highlightLine(updated) + "</div>";
     }
 
-    return res;
 }
 //#endregion
 
@@ -207,7 +232,7 @@ function sleep(milliseconds) {
     return new Promise(r => setTimeout(r, milliseconds));
 }
 
-function removeTabs(text, start, end) {
+/*function removeTabs(text, start, end) {
     if (start >= end || text.length == 0) return; //If the selection is invalid, exits
     
     let selection = text.substring(start, end); //Getting selected text
@@ -225,7 +250,7 @@ function addTabs(text, start, end) {
         selection = "\t" + selection; //Adding a tab to the start, as there is no newline character before it
 
     return text.substring(0, start) + selection.replaceAll("\n", "\n\t") + text.substring(end); //Adding the other tabs
-}
+}*/
 
 function hoverListener(event) {
     if (event.target.className != "main-button") return;
@@ -249,13 +274,13 @@ function removeHoverState() {
     }
 }
 
-async function autoSave() {
+/*async function autoSave() {
     while (true) {
         await sleep(1000 * 60 * 2);
         if (currentFile != null) 
             saveFile();
     }
-}
+}*/
 
 function getLineNode(selectedNode) {
     while (selectedNode.nodeName != "DIV") {
@@ -285,7 +310,7 @@ function setCaretPos(node, position) {
 
 function setLineFocus(goingUp) {
     lineDisplay.children.item(currentLine).style = "";
-    lineDisplay.children.item(goingUp ? --currentLine : ++currentLine).style = "font-weight: 500; opacity: 100%";
+    lineDisplay.children.item(goingUp ? --currentLine : ++currentLine).style = "font-weight: 500; opacity: 80%";
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -318,7 +343,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             lineDisplay.children.item(currentLine).style = "";
             currentLine = indexOfChild(getLineNode(selection.anchorNode));
             
-            lineDisplay.children.item(currentLine).style = "font-weight: 500; opacity: 100%";
+            lineDisplay.children.item(currentLine).style = "font-weight: 500; opacity: 80%";
         }
     });
 
@@ -395,6 +420,21 @@ async function openFile() {
 
     let file = await currentFile.getFile();
     document.title = "Editor - " + file.name;
+    lang = file.name.substring(file.name.indexOf('.') + 1).toUpperCase();
+    switch (lang) {
+        case "JAVA":
+        case "CLASS":
+        case "JAD":
+        case "JAR":
+        case "JSP": lang = "JAVA"; KEYWORDS = JAVA_KEYWORDS; break;
+        case "CPP":
+        case "CC":
+        case "C++":
+        case "CP":
+        case "CXX": lang = "C++"; KEYWORDS = CPP_KEYWORDS; break;
+        default: lang = "TEXT"; break;
+    }
+    
     lineDisplay.innerHTML = "";
     lineCount = 1;
     let content = await file.text();
