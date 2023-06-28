@@ -443,6 +443,11 @@ async function openFile() {
 }
 
 function updateLD() {
+    if (editor.scrollWidth > editor.clientWidth) 
+        editor.style.height = "calc(82vh + 10px)";
+    else
+        editor.style.height = "";
+        
     if (lineCount == editor.childElementCount) {
         return;
     } else if (lineCount < editor.childElementCount) {

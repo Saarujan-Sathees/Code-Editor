@@ -133,7 +133,7 @@ body, html {
 	resize: none;
 	border: none;
 	outline: none;
-	overflow: overlay;
+	overflow: auto;
 	overflow-wrap: unset;
 	white-space: pre;
 	background-color: var(--background);
