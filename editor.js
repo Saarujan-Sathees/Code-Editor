@@ -523,11 +523,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });    
 
-    /*while (true) {
+    while (true) {
         await sleep(300000);
         if (currentFile != null) 
             saveFile();
-    }*/
+    }
 });
 
 async function saveFile(value = editor.value) {
