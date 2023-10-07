@@ -1,11 +1,11 @@
 :root {
 	--background: rgb(238 238 238);
-	--menu: rgb(242, 242, 242);
+	--menu: rgb(242 242 242);
     --secondary-menu: rgb(200 200 200);
-	--text: rgb(60, 60, 60);
+	--text: rgb(60 60 60);
 	--shadow: rgb(0 0 0 / 15%);
-	--accent: rgb(40, 190, 228);
-	--on-hover: rgb(218 222 225);
+	--accent: rgb(40 190 228);
+	--on-hover: rgb(220 220 220);
 
     --editor-font-family: "Fira Code";
     --editor-font-size: 13px;
@@ -58,7 +58,7 @@ body, html {
 	width: 90vw;
 	z-index: 10;
 	padding: 0 4vw 0 4vw;
-	border-radius: 20px; /*8px*/
+	border-radius: 12px; /*20px*/
 	background-color: var(--menu);
 	box-shadow: 0 0 4px var(--shadow);
 	cursor: default;
@@ -118,8 +118,9 @@ body, html {
     width: 11vw;
     top: 10vh;
     left: 1vw;
-    border-radius: 8px;
-    background-color: var(--secondary-menu);
+    border-radius: 12px;/*8px;*/
+    background-color: var(--menu);
+	box-shadow: 0 0 4px var(--shadow);
 }
 
 #editor {
@@ -182,8 +183,12 @@ body, html {
     color: var(--text);
 }
 
+.whitespace {
+    color: var(--text);
+}
+
 .number {
-	color: rgb(58, 186, 152);
+	color: rgb(180 220 180)/*rgb(58, 186, 152);*/
 }
 
 .keyword {
@@ -191,11 +196,11 @@ body, html {
 }
 
 .identifier {
-    color: rgb(65, 121, 224);/*rgb(109, 147, 218);*/
+    color: rgb(70 180 220);/*rgb(65, 121, 224);*//*rgb(109, 147, 218);*/
 }
 
 .string {
-    color: rgb(206 145 120);
+    color: rgb(220 180 70);/*rgb(206 145 120);*/
 }
 
 .comment {
